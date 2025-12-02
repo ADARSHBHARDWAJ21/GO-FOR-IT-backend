@@ -55,4 +55,24 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, console.log(`Server running on port ${PORT}`));
+const server = app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+// Handle port already in use error
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n❌ Error: Port ${PORT} is already in use.`);
+    console.error(`\nTo fix this, you can:`);
+    console.error(`1. Kill the process using port ${PORT}:`);
+    console.error(`   Windows: netstat -ano | findstr :${PORT}`);
+    console.error(`   Then: taskkill /PID <PID> /F`);
+    console.error(`   Or use: npx kill-port ${PORT}`);
+    console.error(`\n2. Or change the PORT in your .env file to a different port (e.g., 5001)`);
+    console.error(`\n3. Or find and close the other application using port ${PORT}\n`);
+    process.exit(1);
+  } else {
+    console.error('Server error:', err);
+    process.exit(1);
+  }
+});

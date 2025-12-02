@@ -1,910 +1,400 @@
-const crypto = require('crypto');
+// Backend/services/aiService.js — Gemini API with REST API Fallback
 
-const destinationTemplates = {
-    delhi: {
-        city: 'Delhi',
-        dailyBudget: '₹4,000',
-        highlights: [
-            'UNESCO heritage sites',
-            'Street food trails',
-            'Museums & galleries',
-            'Night markets'
-        ],
-        slots: {
-            morning: [
-                {
-                    title: 'Historic Red Fort & Chandni Chowk Walk',
-                    location: 'Lal Qila • Old Delhi',
-                    description: 'Guided walk through Red Fort followed by rickshaw ride across Chandni Chowk lanes.',
-                    type: 'sightseeing',
-                    cost: '₹1,200',
-                    duration: '3 hours'
-                },
-                {
-                    title: 'Humayun’s Tomb & Lodhi Art District',
-                    location: 'Nizamuddin & Lodhi Garden',
-                    description: 'Marvel Indo-Persian architecture and stroll through India’s first open-air art district.',
-                    type: 'sightseeing',
-                    cost: '₹900',
-                    duration: '2.5 hours'
-                }
-            ],
-            afternoon: [
-                {
-                    title: 'Food Crawl in Connaught Place',
-                    location: 'Connaught Place',
-                    description: 'Taste iconic dishes at Bengali Market, Wenger’s and Haldiram’s.',
-                    type: 'dining',
-                    cost: '₹800',
-                    duration: '2 hours'
-                },
-                {
-                    title: 'National Museum & Rajpath Drive',
-                    location: 'Janpath & Kartavya Path',
-                    description: 'Explore 2,000 years of history followed by photo stops at India Gate & Parliament.',
-                    type: 'sightseeing',
-                    cost: '₹500',
-                    duration: '2 hours'
-                }
-            ],
-            evening: [
-                {
-                    title: 'Akshardham Light & Water Show',
-                    location: 'Akshardham Temple',
-                    description: 'Watch Sahaj Anand multimedia fountain with synchronized lights.',
-                    type: 'entertainment',
-                    cost: '₹200',
-                    duration: '1.5 hours'
-                },
-                {
-                    title: 'Qutub Minar Sunset & Mehrauli Village',
-                    location: 'Mehrauli Archaeological Park',
-                    description: 'Golden hour at Qutub Minar followed by cafes in Mehrauli village.',
-                    type: 'sightseeing',
-                    cost: '₹600',
-                    duration: '2 hours'
-                }
-            ],
-            alternatives: [
-                { title: 'Dilli Haat handicraft bazaar', type: 'shopping' },
-                { title: 'Kingdom of Dreams Broadway show (Gurugram)', type: 'entertainment' },
-                { title: 'Yamuna Arti at Nigambodh Ghat', type: 'cultural' }
-            ]
-        }
-    },
-    goa: {
-        city: 'Goa',
-        dailyBudget: '₹3,200',
-        highlights: ['Beach hopping', 'Water sports', 'Heritage churches', 'Night markets'],
-        slots: {
-            morning: [
-                {
-                    title: 'Calangute & Baga Beach Water Sports',
-                    location: 'North Goa',
-                    description: 'Parasailing, bumper ride and banana boat combo.',
-                    type: 'adventure',
-                    cost: '₹1,800',
-                    duration: '3 hours'
-                },
-                {
-                    title: 'Old Goa UNESCO Heritage Trail',
-                    location: 'Old Goa',
-                    description: 'Visit Basilica of Bom Jesus, Se Cathedral and the Latin Quarter Fontainhas.',
-                    type: 'sightseeing',
-                    cost: '₹400',
-                    duration: '3 hours'
-                }
-            ],
-            afternoon: [
-                {
-                    title: 'Spice Plantation Lunch Experience',
-                    location: 'Ponda',
-                    description: 'Guided plantation tour with Goan buffet and feni tasting.',
-                    type: 'dining',
-                    cost: '₹1,000',
-                    duration: '2.5 hours'
-                },
-                {
-                    title: 'Chapora Fort & Vagator Sunset',
-                    location: 'Vagator',
-                    description: 'Hike to Dil Chahta Hai fort followed by beach cafes.',
-                    type: 'sightseeing',
-                    cost: '₹300',
-                    duration: '2 hours'
-                }
-            ],
-            evening: [
-                {
-                    title: 'Sunset Cruise on Mandovi',
-                    location: 'Panjim Jetty',
-                    description: 'Live music, folk performances and river views.',
-                    type: 'entertainment',
-                    cost: '₹600',
-                    duration: '1.5 hours'
-                },
-                {
-                    title: 'Saturday Night Market & Club Hopping',
-                    location: 'Arpora & Anjuna',
-                    description: 'Shop indie brands, followed by nightlife at Tito’s lane.',
-                    type: 'entertainment',
-                    cost: '₹1,200',
-                    duration: '3 hours'
-                }
-            ],
-            alternatives: [
-                { title: 'Dudhsagar waterfall jeep safari', type: 'adventure' },
-                { title: 'Butterfly Beach private boat', type: 'leisure' },
-                { title: 'Artjuna wellness workshops', type: 'activity' }
-            ]
-        }
-    },
-    kerala: {
-        city: 'Kerala',
-        dailyBudget: '₹3,800',
-        highlights: ['Backwater cruises', 'Spice trails', 'Tea plantations', 'Ayurvedic therapies'],
-        slots: {
-            morning: [
-                {
-                    title: 'Houseboat Check-in & Alleppey Cruise',
-                    location: 'Punnamada Lake',
-                    description: 'Sail through coconut lagoons with onboard chef.',
-                    type: 'leisure',
-                    cost: '₹2,500',
-                    duration: '4 hours'
-                },
-                {
-                    title: 'Munnar Tea Estate Trek',
-                    location: 'Kolukkumalai / Lockhart',
-                    description: 'Sunrise trek plus factory tasting session.',
-                    type: 'adventure',
-                    cost: '₹1,200',
-                    duration: '4 hours'
-                }
-            ],
-            afternoon: [
-                {
-                    title: 'Periyar Wildlife Boat Safari',
-                    location: 'Thekkady',
-                    description: 'Spot elephants and gaur around the lake.',
-                    type: 'adventure',
-                    cost: '₹500',
-                    duration: '2 hours'
-                },
-                {
-                    title: 'Kathakali & Kalaripayattu Showcase',
-                    location: 'Fort Kochi',
-                    description: 'Backstage makeup tour followed by performances.',
-                    type: 'cultural',
-                    cost: '₹700',
-                    duration: '2 hours'
-                }
-            ],
-            evening: [
-                {
-                    title: 'Sunset at Marine Drive Walkway',
-                    location: 'Kochi',
-                    description: 'Chinese fishing nets and cafe hopping.',
-                    type: 'leisure',
-                    cost: '₹300',
-                    duration: '1.5 hours'
-                },
-                {
-                    title: 'Sarovaram Ayurveda & Spa Session',
-                    location: 'Kumarakom',
-                    description: 'Traditional Abhyangam massage with medicated oils.',
-                    type: 'wellness',
-                    cost: '₹1,500',
-                    duration: '1 hour'
-                }
-            ],
-            alternatives: [
-                { title: 'Poovar mangrove canoe ride', type: 'nature' },
-                { title: 'Athirappilly waterfalls excursion', type: 'sightseeing' },
-                { title: 'Vypeen island cycling circuit', type: 'activity' }
-            ]
-        }
-    }
-};
-
-const getDestinationTemplate = (destination = '') => {
-    const normalized = destination.toLowerCase().trim();
-    const direct = destinationTemplates[normalized];
-    if (direct) return direct;
-
-    return Object.values(destinationTemplates).find(template =>
-        normalized.includes(template.city.toLowerCase())
-    ) || {
-        city: destination || 'Your Destination',
-        dailyBudget: '₹2,500',
-        highlights: [
-            'Morning sightseeing',
-            'Local dining spots',
-            'Evening cultural walk'
-        ],
-        slots: {
-            morning: [{
-                title: 'Guided heritage walk',
-                location: destination,
-                description: 'Discover local monuments with a certified guide.',
-                type: 'sightseeing',
-                cost: '₹900',
-                duration: '3 hours'
-            }],
-            afternoon: [{
-                title: 'Regional cuisine tasting',
-                location: 'City centre',
-                description: 'Sample famous dishes at century-old eateries.',
-                type: 'dining',
-                cost: '₹700',
-                duration: '2 hours'
-            }],
-            evening: [{
-                title: 'Night bazaar & performances',
-                location: 'Popular market',
-                description: 'Shop handicrafts and enjoy street music.',
-                type: 'cultural',
-                cost: '₹500',
-                duration: '2 hours'
-            }],
-            alternatives: [{ title: 'Local handicraft workshop', type: 'activity' }]
-        }
-    };
-};
-
-const pickSlotActivity = (list = [], index = 0, fallback) => {
-    if (!list.length) return fallback;
-    return list[index % list.length];
-};
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const fetch = require("node-fetch");
 
 class AIService {
     constructor() {
         this.apiKey = process.env.GEMINI_API_KEY;
-        this.modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
-        this.model = null;
-        this.modelInitPromise = null;
-        this.aiAvailable = Boolean(this.apiKey);
+        // Try these models in order - updated with more recent model names
+        this.fallbackModels = [
+            'gemini-1.5-pro',
+            'gemini-1.5-flash', 
+            'gemini-pro',
+            'gemini-2.0-flash-exp',
+            'models/gemini-1.5-pro',
+            'models/gemini-1.5-flash',
+            'models/gemini-pro'
+        ];
+        this.modelName = process.env.GEMINI_MODEL || this.fallbackModels[0];
 
-        if (!this.aiAvailable) {
-            console.warn('[AI Service] GEMINI_API_KEY not configured. Using mock itineraries.');
+        if (!this.apiKey) {
+            console.error("❌ GEMINI_API_KEY missing in .env");
+        } else {
+            console.log("✅ Gemini AI initialized");
+        }
+
+        try {
+            this.genAI = new GoogleGenerativeAI(this.apiKey);
+        } catch (err) {
+            console.error("❌ Error initializing Gemini AI:", err);
         }
     }
 
-    async ensureModel() {
-        if (!this.aiAvailable || this.model) {
-            return this.model;
-        }
-
-        if (!this.modelInitPromise) {
-            this.modelInitPromise = (async () => {
-                try {
-                    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-                    const client = new GoogleGenerativeAI(this.apiKey);
-                    
-                    // Try the configured model first
-                    const modelsToTry = [
-                        this.modelName,
-                        'gemini-1.5-flash',
-                        'gemini-1.5-pro',
-                        'gemini-pro'
-                    ];
-                    
-                    let initialized = false;
-                    for (const modelName of modelsToTry) {
-                        try {
-                            this.model = client.getGenerativeModel({ model: modelName });
-                            // Test the model by checking if it's accessible
-                            this.modelName = modelName;
-                            console.log(`[AI Service] Gemini model '${modelName}' initialized successfully.`);
-                            initialized = true;
-                            break;
-                        } catch (modelError) {
-                            // Try next model
-                            continue;
-                        }
-                    }
-                    
-                    if (!initialized) {
-                        throw new Error('Failed to initialize any Gemini model. Please check your API key and ensure it has access to Gemini models.');
-                    }
-                } catch (error) {
-                    this.aiAvailable = false;
-                    console.error('[AI Service] Failed to initialize Gemini:', error.message);
-                    console.error('[AI Service] Please verify your GEMINI_API_KEY in the .env file is correct and has proper permissions.');
+    // List available models using REST API and filter for generateContent support
+    async listAvailableModels() {
+        try {
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1/models?key=${this.apiKey}`
+            );
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const status = response.status;
+                
+                if (status === 403 || status === 401) {
+                    console.error("❌ API key authentication failed. Check your GEMINI_API_KEY.");
+                    throw new Error("API key is invalid or doesn't have permission to list models");
+                } else if (status === 404) {
+                    console.error("❌ Generative Language API not found. Enable it in Google Cloud Console.");
+                    throw new Error("Generative Language API is not enabled for your project");
+                } else {
+                    console.error(`❌ Error fetching models list (${status}):`, errorData);
+                    return [];
                 }
-                return this.model;
-            })();
+            }
+            
+            const data = await response.json();
+            
+            if (data.models && Array.isArray(data.models)) {
+                // Filter for Gemini models that support generateContent
+                const supportedModels = data.models
+                    .filter(model => {
+                        const name = model.name || '';
+                        const supportsGenerateContent = model.supportedGenerationMethods && 
+                            model.supportedGenerationMethods.includes('generateContent');
+                        return name.includes('gemini') && supportsGenerateContent;
+                    })
+                    .map(model => {
+                        // Return both full name and short name
+                        const fullName = model.name;
+                        const shortName = fullName.replace(/^models\//, '');
+                        return { fullName, shortName };
+                    });
+                
+                const modelNames = supportedModels.map(m => m.shortName);
+                console.log("📋 Available Gemini models with generateContent support:", modelNames);
+                
+                if (supportedModels.length === 0) {
+                    const allGeminiModels = data.models
+                        .filter(m => m.name && m.name.includes('gemini'))
+                        .map(m => m.name);
+                    console.log("⚠️ Found Gemini models but none support generateContent:", allGeminiModels);
+                }
+                
+                return supportedModels;
+            }
+            return [];
+        } catch (error) {
+            console.error("❌ Error listing models:", error.message);
+            return [];
         }
-
-        return this.modelInitPromise;
     }
 
+    // Generate content using REST API directly (v1 endpoint)
+    async generateContentViaREST(modelName, prompt) {
+        // Clean model name (remove 'models/' prefix if present)
+        const cleanModelName = modelName.replace(/^models\//, '');
+        const url = `https://generativelanguage.googleapis.com/v1/models/${cleanModelName}:generateContent?key=${this.apiKey}`;
+
+        const payload = {
+            contents: [{
+                parts: [{
+                    text: prompt
+                }]
+            }]
+        };
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorData)}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            return data.candidates[0].content.parts[0].text;
+        }
+        
+        throw new Error("Invalid response format from API");
+    }
+
+    // Parse AI response - extract JSON from text
+    parseItineraryResponse(text) {
+        try {
+            // Try to extract JSON from markdown code blocks if present
+            const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[1]);
+            }
+
+            // Try to find JSON object in the text
+            const jsonObjectMatch = text.match(/\{[\s\S]*\}/);
+            if (jsonObjectMatch) {
+                return JSON.parse(jsonObjectMatch[0]);
+            }
+
+            // If no JSON found, return as text (fallback)
+            console.warn("⚠️ Could not parse JSON from AI response, returning as text");
+            return text;
+        } catch (error) {
+            console.error("❌ Error parsing JSON response:", error.message);
+            console.log("Raw response:", text.substring(0, 500));
+            // Return as text if parsing fails
+            return text;
+        }
+    }
+
+    // Generate a realistic, detailed itinerary with fallback support
     async generateItinerary(tripDetails) {
-        return this.generateWithFallback(tripDetails);
-    }
+        const prompt = this.buildPrompt(tripDetails);
+        
+        // First, get the actual available models from the API
+        console.log("🔍 Checking available models from API...");
+        let availableModels = [];
+        let listModelsError = null;
+        
+        try {
+            availableModels = await this.listAvailableModels();
+        } catch (error) {
+            // If ListModels fails with auth/permission error, throw immediately
+            listModelsError = error;
+            if (error.message.includes('API key') || error.message.includes('not enabled')) {
+                throw new Error(
+                    `Cannot access Gemini API: ${error.message}\n\n` +
+                    `Please:\n` +
+                    `1. Verify your API key at https://aistudio.google.com/apikey\n` +
+                    `2. Enable Generative Language API: https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com\n` +
+                    `3. Check API key restrictions allow "Generative Language API"\n` +
+                    `4. Wait 2-5 minutes after enabling, then restart your server`
+                );
+            }
+            // Otherwise, continue with fallback models
+            console.log("⚠️ Could not fetch available models, will try common model names...");
+        }
+        
+        // Use ONLY models that are actually available from the API
+        let modelsToTry = [];
+        
+        if (availableModels.length > 0) {
+            // Use the models returned from ListModels API
+            modelsToTry = availableModels.map(m => m.shortName);
+            console.log(`✅ Found ${modelsToTry.length} available model(s) to try: ${modelsToTry.join(', ')}`);
+        } else {
+            // If ListModels returned empty or failed, try common model names as fallback
+            console.log("⚠️ No models found in API response, trying common model names as fallback...");
+            modelsToTry = ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro'];
+        }
 
-    async generateCustomItinerary(tripDetails, customizations = {}) {
-        return this.generateWithFallback(tripDetails, customizations);
-    }
+        if (modelsToTry.length === 0) {
+            throw new Error(
+                "No Gemini models are available for your API key. " +
+                "Please verify:\n" +
+                "1. Your API key is valid at https://aistudio.google.com/apikey\n" +
+                "2. Generative Language API is enabled in Google Cloud Console\n" +
+                "3. Your API key has access to Gemini models"
+            );
+        }
 
-    async generateWithFallback(tripDetails, customizations = {}) {
-        await this.ensureModel();
+        let lastError = null;
 
-        if (this.model) {
+        // Try SDK first, then REST API for each model
+        for (let i = 0; i < modelsToTry.length; i++) {
+            const modelName = modelsToTry[i];
+            // Clean model name (should already be clean from listAvailableModels, but just in case)
+            const cleanModelName = modelName.replace(/^models\//, '');
+            
+            // Try SDK first
             try {
-                const prompt = this.buildPrompt(tripDetails, customizations);
-                const result = await this.model.generateContent(prompt);
-                const text = result?.response?.text?.();
+                console.log(`🔄 [${i + 1}/${modelsToTry.length}] Attempting with SDK - model: ${cleanModelName}`);
+                
+                const model = this.genAI.getGenerativeModel({
+                    model: cleanModelName
+                });
 
-                const cleaned = this.extractJson(text);
-                if (cleaned) {
-                    const parsed = JSON.parse(cleaned);
-                    return this.normalizeItinerary(parsed, tripDetails);
+                const result = await model.generateContent(prompt);
+                const text = await result.response.text();
+
+                console.log(`✅ Successfully generated itinerary using SDK model: ${cleanModelName}`);
+
+                // Parse JSON response
+                const parsedItinerary = this.parseItineraryResponse(text);
+
+                return {
+                    success: true,
+                    itinerary: parsedItinerary,
+                    modelUsed: cleanModelName,
+                    method: 'SDK'
+                };
+            } catch (sdkError) {
+                console.log(`⚠️ SDK failed for ${cleanModelName}, trying REST API...`);
+                
+                // If SDK fails, try REST API
+                try {
+                    console.log(`🔄 [${i + 1}/${modelsToTry.length}] Attempting with REST API - model: ${cleanModelName}`);
+                    const text = await this.generateContentViaREST(cleanModelName, prompt);
+                    
+                    console.log(`✅ Successfully generated itinerary using REST API model: ${cleanModelName}`);
+
+                    // Parse JSON response
+                    const parsedItinerary = this.parseItineraryResponse(text);
+
+                    return {
+                        success: true,
+                        itinerary: parsedItinerary,
+                        modelUsed: cleanModelName,
+                        method: 'REST'
+                    };
+                } catch (restError) {
+                    console.error(`❌ Both SDK and REST failed for ${cleanModelName}`);
+                    console.error(`   SDK Error: ${sdkError.message.substring(0, 200)}...`);
+                    console.error(`   REST Error: ${restError.message.substring(0, 200)}...`);
+                    lastError = restError;
+                    
+                    // Continue to next model if available
+                    if (i < modelsToTry.length - 1) {
+                        console.log(`🔄 Trying next model...`);
+                        continue;
+                    }
                 }
-            } catch (error) {
-                console.error('[AI Service] Gemini generation failed:', error.message);
             }
         }
 
-        return this.generateMockItinerary(tripDetails, customizations);
+        // If all models failed, provide helpful error message
+        console.error("❌ All Gemini models failed.");
+        
+        let errorMessage = `Failed to generate itinerary after trying ${modelsToTry.length} model(s): ${modelsToTry.join(', ')}`;
+        errorMessage += `\n\nThis usually means:`;
+        errorMessage += `\n1. Your API key doesn't have access to Gemini models`;
+        errorMessage += `\n2. Generative Language API is not enabled for your project`;
+        errorMessage += `\n3. Your API key restrictions are blocking access`;
+        errorMessage += `\n\nTo fix this:`;
+        errorMessage += `\n1. Go to https://aistudio.google.com/apikey and verify your key`;
+        errorMessage += `\n2. Enable Generative Language API: https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com`;
+        errorMessage += `\n3. Check API key restrictions allow "Generative Language API"`;
+        errorMessage += `\n4. Wait 2-5 minutes after enabling, then restart your server`;
+        
+        if (lastError) {
+            const errorMsg = lastError.message || String(lastError);
+            // Extract the key error message
+            if (errorMsg.includes('404')) {
+                errorMessage += `\n\nError: Models are not found. This confirms the API is not enabled or accessible.`;
+            } else if (errorMsg.includes('quota') || errorMsg.includes('429')) {
+                errorMessage += `\n\nError: Quota exceeded. Please check your usage limits.`;
+            } else {
+                errorMessage += `\n\nLast error: ${errorMsg.substring(0, 300)}`;
+            }
+        }
+        
+        throw new Error(errorMessage);
     }
 
-    buildPrompt(tripDetails, customizations) {
+    // Build AI prompt from user trip inputs
+    buildPrompt(details) {
         const {
             destination,
-            duration,
+            dates,
             budget,
-            adults = 1,
-            children = 0,
-            preferences = '',
-            startDate = '',
-            endDate = '',
-            departureAirport = '',
-            departureStation = ''
-        } = tripDetails;
+            adults,
+            children,
+            preferences,
+            airport,
+            railway,
+            startDate,
+            endDate
+        } = details;
+
+        // Calculate number of days and generate date array
+        let numDays = 5; // default
+        let startDateObj = null;
+        let dateArray = [];
+        
+        if (startDate && endDate) {
+            startDateObj = new Date(startDate);
+            const end = new Date(endDate);
+            const diffTime = Math.abs(end - startDateObj);
+            numDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            
+            // Generate array of dates for each day
+            for (let i = 0; i < numDays; i++) {
+                const currentDate = new Date(startDateObj);
+                currentDate.setDate(startDateObj.getDate() + i);
+                dateArray.push(currentDate.toISOString().split('T')[0]); // Format as YYYY-MM-DD
+            }
+        } else if (details.duration) {
+            const match = details.duration.match(/(\d+)/);
+            if (match) numDays = parseInt(match[1]);
+        }
 
         return `
-You are an expert Indian travel planner. Create a JSON itinerary with the following structure (no prose, JSON only):
+You are an expert senior travel planner. Create a detailed, day-by-day itinerary in JSON format.
+
+Destination: ${destination}
+Travel Dates: ${dates || (startDate && endDate ? `${startDate} to ${endDate}` : 'Not specified')}
+Budget Range: ${budget}
+Travellers: ${adults} adults, ${children} children
+Nearest Airport: ${airport || 'Not specified'}
+Nearest Railway Station: ${railway || 'Not specified'}
+Traveler Preferences: ${preferences || 'None specified'}
+Number of Days: ${numDays}
+
+IMPORTANT: You MUST respond with ONLY valid JSON in this exact format (no markdown, no code blocks, just pure JSON):
+
 {
-  "destination": string,
-  "duration": string,
-  "budget": string,
-  "totalTravelers": number,
-  "children": number,
-  "startDate": string,
-  "endDate": string,
+  "destination": "${destination}",
+  "duration": "${numDays} days",
+  "budget": "${budget}",
+  "startDate": "${startDate || ''}",
+  "endDate": "${endDate || ''}",
   "days": [
     {
-      "day": number,
-      "date": string,
-      "city": string,
-      "theme": string,
-      "dailyBudget": string,
-      "highlights": string[],
+      "day": 1,
+      "date": "${dateArray[0] || ''}",
+      "city": "${destination}",
       "activities": [
         {
-          "time": string,
-          "title": string,
-          "type": string,
-          "location": string,
-          "description": string,
-          "duration": string,
-          "cost": string
+          "time": "9:00 AM",
+          "title": "Activity name",
+          "type": "activity",
+          "location": "Location name",
+          "duration": "2 hours",
+          "notes": "Brief description or notes"
         }
       ],
       "alternatives": [
         {
-          "title": string,
-          "type": string,
-          "description": string
+          "title": "Alternative activity name",
+          "type": "activity"
         }
       ]
     }
-  ],
-  "transportation": {
-    "flights": [],
-    "trains": []
-  },
-  "accommodation": {
-    "budget": [],
-    "midRange": [],
-    "luxury": []
-  },
-  "tips": string[],
-  "emergencyContacts": {
-    "localHelpline": string,
-    "emergencyServices": string
-  }
+  ]
 }
 
-Trip Details:
-- Destination: ${destination}
-- Duration: ${duration}
-- Budget: ${budget}
-- Adults: ${adults}
-- Children: ${children}
-- Preferences: ${preferences}
-- Start Date: ${startDate}
-- End Date: ${endDate}
+Requirements:
+- Generate exactly ${numDays} days in the "days" array
+${dateArray.length > 0 ? `- Assign dates to each day: ${dateArray.map((d, i) => `Day ${i + 1} = ${d}`).join(', ')}` : '- Include date field for each day (YYYY-MM-DD format)'}
+- Each day must have at least 3-5 activities covering morning, afternoon, and evening
+- Activity types can be: "activity", "food", "transport", "accommodation", "sightseeing"
+- Include realistic times (e.g., "9:00 AM", "2:30 PM", "7:00 PM")
+- Include "duration" field for each activity (e.g., "2 hours", "1.5 hours", "45 minutes")
+- Use real places, restaurants, and attractions in ${destination}
+- Provide specific locations (neighborhoods, areas, or landmarks)
+- Include 2-3 alternatives per day
+- Make activities realistic and sequential (consider travel time between locations)
+- Keep notes brief but informative
 
-Customizations: ${JSON.stringify(customizations)}
-
-Constraints:
-1. Keep maximum 15 days.
-2. Costs in INR with symbol.
-3. Include family-friendly options when children > 0.
-4. Suggest realistic activities for the destination.
-5. DO NOT repeat any place/attraction across different days. Each place should appear only once in the entire itinerary.
-6. Each day must have minimum 4 unique activities/places to visit (excluding transport).
-7. Day 1 must start with pickup from airport or railway station (based on user's departureAirport or departureStation selection).
-8. Last day must end with drop at airport or railway station.
-9. Each day must include hotel pickup at the start and hotel drop at the end.
-10. Use real, specific place names for the destination (e.g., for Delhi: Red Fort, India Gate, Qutub Minar, etc.).
-
-Departure Info:
-- Departure Airport: ${departureAirport || 'Not specified'}
-- Departure Station: ${departureStation || 'Not specified'}
-`;
-    }
-
-    extractJson(text = '') {
-        if (!text) {
-            return null;
-        }
-
-        // Try to find the first JSON object in the response
-        const start = text.indexOf('{');
-        const end = text.lastIndexOf('}');
-
-        if (start === -1 || end === -1) {
-            return null;
-        }
-
-        return text.slice(start, end + 1);
-    }
-
-    enhanceDaysWithTransport(days, tripDetails) {
-        if (!Array.isArray(days) || days.length === 0) return days;
-
-        const getTransportPoint = () => {
-            if (tripDetails.departureAirport) {
-                const airportName = tripDetails.departureAirport.split(' - ')[1] || tripDetails.departureAirport;
-                return airportName;
-            }
-            if (tripDetails.departureStation) {
-                const stationName = tripDetails.departureStation.split(' - ')[1] || tripDetails.departureStation;
-                return stationName;
-            }
-            return 'Airport/Railway Station';
-        };
-        const transportPoint = getTransportPoint();
-
-        return days.map((day, index) => {
-            const isFirstDay = index === 0;
-            const isLastDay = index === days.length - 1;
-            const activities = Array.isArray(day.activities) ? [...day.activities] : [];
-
-            // Check if transport activities already exist
-            const hasAirportPickup = activities.some(a => 
-                a.title?.toLowerCase().includes('pickup') && 
-                (a.location?.toLowerCase().includes('airport') || a.location?.toLowerCase().includes('station'))
-            );
-            const hasHotelPickup = activities.some(a => 
-                a.title?.toLowerCase().includes('hotel pickup')
-            );
-            const hasHotelDrop = activities.some(a => 
-                a.title?.toLowerCase().includes('hotel drop')
-            );
-            const hasAirportDrop = activities.some(a => 
-                a.title?.toLowerCase().includes('drop') && 
-                (a.location?.toLowerCase().includes('airport') || a.location?.toLowerCase().includes('station'))
-            );
-
-            // Add airport/station pickup on day 1 if missing
-            if (isFirstDay && !hasAirportPickup) {
-                activities.unshift({
-                    time: '09:00 AM',
-                    title: `Pickup from ${transportPoint}`,
-                    type: 'transport',
-                    location: transportPoint,
-                    description: `Meet and greet at ${transportPoint}. Transfer to hotel.`,
-                    duration: '1 hour',
-                    cost: '₹500'
-                });
-            }
-
-            // Add hotel pickup if not first day and missing
-            if (!isFirstDay && !hasHotelPickup) {
-                activities.unshift({
-                    time: '09:00 AM',
-                    title: 'Hotel Pickup',
-                    type: 'transport',
-                    location: 'Hotel',
-                    description: 'Pickup from hotel for day\'s activities.',
-                    duration: '15 minutes',
-                    cost: 'Included'
-                });
-            }
-
-            // Add airport/station drop on last day if missing
-            if (isLastDay && !hasAirportDrop) {
-                activities.push({
-                    time: activities.length > 0 ? '08:00 PM' : '06:00 PM',
-                    title: `Drop at ${transportPoint}`,
-                    type: 'transport',
-                    location: transportPoint,
-                    description: `Transfer to ${transportPoint} for departure.`,
-                    duration: '1 hour',
-                    cost: '₹500'
-                });
-            }
-
-            // Add hotel drop if not last day and missing
-            if (!isLastDay && !hasHotelDrop) {
-                activities.push({
-                    time: activities.length > 0 ? '09:00 PM' : '08:00 PM',
-                    title: 'Hotel Drop',
-                    type: 'transport',
-                    location: 'Hotel',
-                    description: 'Return to hotel after day\'s activities.',
-                    duration: '15 minutes',
-                    cost: 'Included'
-                });
-            }
-
-            return {
-                ...day,
-                activities
-            };
-        });
-    }
-
-    normalizeItinerary(itinerary, tripDetails) {
-        if (!itinerary || typeof itinerary !== 'object') {
-            return this.generateMockItinerary(tripDetails);
-        }
-
-        const days = Array.isArray(itinerary.days) && itinerary.days.length > 0
-            ? this.enhanceDaysWithTransport(itinerary.days, tripDetails)
-            : this.buildMockDays(tripDetails);
-
-        return {
-            destination: itinerary.destination || tripDetails.destination,
-            duration: itinerary.duration || tripDetails.duration,
-            budget: itinerary.budget || tripDetails.budget,
-            totalTravelers: itinerary.totalTravelers || (tripDetails.adults || 1) + (tripDetails.children || 0),
-            children: itinerary.children ?? tripDetails.children ?? 0,
-            startDate: itinerary.startDate || tripDetails.startDate || '',
-            endDate: itinerary.endDate || tripDetails.endDate || '',
-            days,
-            transportation: itinerary.transportation || this.buildMockTransportation(tripDetails.destination),
-            accommodation: itinerary.accommodation || this.buildMockAccommodation(tripDetails.destination),
-            tips: itinerary.tips || [
-                'Carry a reusable water bottle to stay hydrated.',
-                'Keep digital copies of important documents.'
-            ],
-            emergencyContacts: itinerary.emergencyContacts || {
-                localHelpline: '112',
-                emergencyServices: '100'
-            }
-        };
-    }
-
-    generateMockItinerary(tripDetails = {}, customizations = {}) {
-        const days = this.buildMockDays(tripDetails, customizations);
-
-        return {
-            destination: tripDetails.destination || 'Unknown Destination',
-            duration: tripDetails.duration || `${days.length} days`,
-            budget: tripDetails.budget || '₹25,000',
-            totalTravelers: (tripDetails.adults || 1) + (tripDetails.children || 0),
-            children: tripDetails.children || 0,
-            startDate: tripDetails.startDate || '',
-            endDate: tripDetails.endDate || '',
-            days,
-            transportation: this.buildMockTransportation(tripDetails.destination),
-            accommodation: this.buildMockAccommodation(tripDetails.destination),
-            totalEstimatedCost: tripDetails.budget || '₹25,000',
-            tips: [
-                'Book popular activities in advance during peak season.',
-                'Keep some cash handy for local markets.',
-                'Try local cuisine at trusted eateries.'
-            ],
-            emergencyContacts: {
-                localHelpline: '112',
-                emergencyServices: '100',
-                tourismHelpline: '1363'
-            },
-            debug: {
-                id: crypto.randomUUID(),
-                source: 'mock',
-                generatedAt: new Date().toISOString()
-            }
-        };
-    }
-
-    buildMockDays(tripDetails = {}, customizations = {}) {
-        const durationString = tripDetails.duration || '3 days';
-        const numDays = Math.min(parseInt(durationString, 10) || 3, 15);
-        const destination = tripDetails.destination || 'Your Destination';
-        const baseDate = tripDetails.startDate ? new Date(tripDetails.startDate) : null;
-        const template = getDestinationTemplate(destination);
-
-        // Track used places to avoid repetition
-        const usedPlaces = new Set();
-        const getTransportPoint = () => {
-            if (tripDetails.departureAirport) {
-                const airportName = tripDetails.departureAirport.split(' - ')[1] || tripDetails.departureAirport;
-                return airportName;
-            }
-            if (tripDetails.departureStation) {
-                const stationName = tripDetails.departureStation.split(' - ')[1] || tripDetails.departureStation;
-                return stationName;
-            }
-            return 'Airport/Railway Station';
-        };
-        const transportPoint = getTransportPoint();
-
-        // Collect all available activities from template
-        const allActivities = [
-            ...(template.slots.morning || []),
-            ...(template.slots.afternoon || []),
-            ...(template.slots.evening || []),
-            ...(template.slots.lateNight || [])
-        ];
-
-        // Helper to get next unused activity
-        const getNextUnusedActivity = (slotList, fallback) => {
-            if (!slotList || slotList.length === 0) return fallback;
-            
-            // Try to find an unused activity
-            for (const activity of slotList) {
-                const placeKey = `${activity.title}|${activity.location}`.toLowerCase();
-                if (!usedPlaces.has(placeKey)) {
-                    usedPlaces.add(placeKey);
-                    return activity;
-                }
-            }
-            
-            // If all are used, try from all activities
-            for (const activity of allActivities) {
-                const placeKey = `${activity.title}|${activity.location}`.toLowerCase();
-                if (!usedPlaces.has(placeKey)) {
-                    usedPlaces.add(placeKey);
-                    return activity;
-                }
-            }
-            
-            // Last resort: use fallback but mark it
-            const fallbackKey = `${fallback.title}|${fallback.location}`.toLowerCase();
-            if (!usedPlaces.has(fallbackKey)) {
-                usedPlaces.add(fallbackKey);
-            }
-            return fallback;
-        };
-
-        return Array.from({ length: numDays }).map((_, index) => {
-            const dayNumber = index + 1;
-            const isFirstDay = dayNumber === 1;
-            const isLastDay = dayNumber === numDays;
-            const date = baseDate
-                ? new Date(baseDate.getTime() + index * 86400000).toISOString().split('T')[0]
-                : `Day ${dayNumber}`;
-
-            const activities = [];
-
-            // Day 1: Start with airport/station pickup
-            if (isFirstDay) {
-                activities.push({
-                    time: '09:00 AM',
-                    title: `Pickup from ${transportPoint}`,
-                    type: 'transport',
-                    location: transportPoint,
-                    description: `Meet and greet at ${transportPoint}. Transfer to hotel.`,
-                    duration: '1 hour',
-                    cost: '₹500'
-                });
-            }
-
-            // Hotel pickup for all days (except day 1 which already has airport pickup)
-            if (!isFirstDay) {
-                activities.push({
-                    time: '09:00 AM',
-                    title: 'Hotel Pickup',
-                    type: 'transport',
-                    location: 'Hotel',
-                    description: 'Pickup from hotel for day\'s activities.',
-                    duration: '15 minutes',
-                    cost: 'Included'
-                });
-            }
-
-            // Get activities ensuring no repetition and minimum 4 per day
-            const morning = getNextUnusedActivity(
-                template.slots.morning,
-                {
-                    title: `${destination} heritage walk`,
-                    location: destination,
-                    description: `Explore historic landmarks of ${destination}.`,
-                    type: 'sightseeing',
-                    cost: '₹900',
-                    duration: '3 hours'
-                }
-            );
-
-            const midMorning = getNextUnusedActivity(
-                template.slots.morning?.slice(1) || [],
-                {
-                    title: `${destination} cultural site`,
-                    location: destination,
-                    description: `Visit a significant cultural attraction.`,
-                    type: 'sightseeing',
-                    cost: '₹600',
-                    duration: '2 hours'
-                }
-            );
-
-            const afternoon = getNextUnusedActivity(
-                template.slots.afternoon,
-                {
-                    title: 'Local cuisine experience',
-                    location: 'City centre',
-                    description: 'Enjoy authentic regional dishes.',
-                    type: 'dining',
-                    cost: '₹700',
-                    duration: '2 hours'
-                }
-            );
-
-            const lateAfternoon = getNextUnusedActivity(
-                template.slots.afternoon?.slice(1) || [],
-                {
-                    title: 'Market exploration',
-                    location: 'Local market',
-                    description: 'Shop for souvenirs and local crafts.',
-                    type: 'shopping',
-                    cost: '₹500',
-                    duration: '1.5 hours'
-                }
-            );
-
-            const evening = getNextUnusedActivity(
-                template.slots.evening,
-                {
-                    title: 'Evening cultural experience',
-                    location: 'City centre',
-                    description: 'Enjoy local performances and nightlife.',
-                    type: 'entertainment',
-                    cost: '₹600',
-                    duration: '2 hours'
-                }
-            );
-
-            // Add activities with proper timing
-            if (morning) {
-                activities.push({
-                    time: isFirstDay ? '10:30 AM' : '10:00 AM',
-                    ...morning
-                });
-            }
-
-            if (midMorning) {
-                activities.push({
-                    time: '12:00 PM',
-                    ...midMorning
-                });
-            }
-
-            if (afternoon) {
-                activities.push({
-                    time: '01:30 PM',
-                    ...afternoon
-                });
-            }
-
-            if (lateAfternoon) {
-                activities.push({
-                    time: '04:00 PM',
-                    ...lateAfternoon
-                });
-            }
-
-            if (evening) {
-                activities.push({
-                    time: '07:00 PM',
-                    ...evening
-                });
-            }
-
-            // Last day: Add airport/station drop before hotel drop
-            if (isLastDay) {
-                activities.push({
-                    time: '08:00 PM',
-                    title: `Drop at ${transportPoint}`,
-                    type: 'transport',
-                    location: transportPoint,
-                    description: `Transfer to ${transportPoint} for departure.`,
-                    duration: '1 hour',
-                    cost: '₹500'
-                });
-            } else {
-                // Hotel drop for all days except last
-                activities.push({
-                    time: '09:00 PM',
-                    title: 'Hotel Drop',
-                    type: 'transport',
-                    location: 'Hotel',
-                    description: 'Return to hotel after day\'s activities.',
-                    duration: '15 minutes',
-                    cost: 'Included'
-                });
-            }
-
-            const alternatives = (template.slots.alternatives || []).slice(0, 3).map((alt) => ({
-                ...alt,
-                description: alt.description || `Optional plan around ${template.city}`
-            }));
-
-            return {
-                day: dayNumber,
-                date,
-                city: template.city,
-                theme: customizations.theme || (tripDetails.preferences || template.highlights[0] || 'Exploration'),
-                dailyBudget: template.dailyBudget,
-                highlights: template.highlights,
-                activities,
-                alternatives
-            };
-        });
-    }
-
-    buildMockTransportation(destination = 'Destination') {
-        return {
-            flights: [
-                {
-                    airline: 'GoAir',
-                    from: 'Your City',
-                    to: destination,
-                    price: '₹5,500',
-                    notes: 'Book 3 weeks in advance for best fares.'
-                }
-            ],
-            trains: [
-                {
-                    train: 'Express 12345',
-                    class: 'AC 3 Tier',
-                    price: '₹1,800',
-                    notes: 'Recommended for budget-friendly travel.'
-                }
-            ]
-        };
-    }
-
-    buildMockAccommodation(destination = 'Destination') {
-        return {
-            budget: [
-                {
-                    name: `${destination} Budget Inn`,
-                    pricePerNight: '₹1,200',
-                    amenities: ['Wi-Fi', 'Breakfast', 'Central location']
-                }
-            ],
-            midRange: [
-                {
-                    name: `${destination} Comfort Suites`,
-                    pricePerNight: '₹2,800',
-                    amenities: ['Pool', 'Restaurant', 'Airport pickup']
-                }
-            ],
-            luxury: [
-                {
-                    name: `${destination} Palace Retreat`,
-                    pricePerNight: '₹6,500',
-                    amenities: ['Spa', 'Fine dining', 'City views']
-                }
-            ]
-        };
+Return ONLY the JSON object, nothing else.
+        `;
     }
 }
 
 module.exports = new AIService();
-

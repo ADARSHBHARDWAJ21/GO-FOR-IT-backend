@@ -1,18 +1,21 @@
-const express = require('express');
-const router = express.Router();
+// routes/itineraryRoutes.js — DeepSeek Version (Option A)
+
+const express = require("express");
 const {
-    generateItinerary,
-    generateCustomItinerary,
-    regenerateItinerary
-} = require('../controllers/itineraryController');
+  generateItinerary,
+  generateCustomItinerary,
+  regenerateItinerary
+} = require("../controllers/itineraryController");
 
-// Generate AI-powered itinerary
-router.post('/generate', generateItinerary);
+const router = express.Router();
 
-// Generate customized AI itinerary
-router.post('/generate-custom', generateCustomItinerary);
+// Generate DeepSeek AI itinerary
+router.post("/generate", generateItinerary);
 
-// Regenerate itinerary with modifications
-router.post('/regenerate', regenerateItinerary);
+// Generate DeepSeek AI itinerary with customizations
+router.post("/generate-custom", generateCustomItinerary);
+
+// Regenerate itinerary using DeepSeek AI
+router.post("/regenerate", regenerateItinerary);
 
 module.exports = router;
