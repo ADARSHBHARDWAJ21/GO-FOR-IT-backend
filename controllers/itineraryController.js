@@ -13,10 +13,26 @@ exports.generateItinerary = async (req, res) => {
     });
   } catch (error) {
     console.error("Itinerary Generation Error:", error);
+    console.error("Error stack:", error.stack);
+    
+    // Provide more detailed error message
+    let errorMessage = error.message || "Failed to generate itinerary";
+    let userMessage = "Failed to generate itinerary";
+    
+    // Check for specific error types
+    if (errorMessage.includes('GEMINI_API_KEY is missing')) {
+      userMessage = "API key is missing. Please configure GEMINI_API_KEY in your environment variables.";
+    } else if (errorMessage.includes('Failed to initialize Gemini AI')) {
+      userMessage = "Failed to initialize AI service. Please check your API key configuration.";
+    } else if (errorMessage.includes('API key') || errorMessage.includes('not enabled')) {
+      userMessage = "API key issue detected. Please verify your Gemini API key is valid and the API is enabled.";
+    }
+    
     return res.status(500).json({
       success: false,
-      message: "Failed to generate itinerary",
-      error: error.message
+      message: userMessage,
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };

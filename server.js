@@ -58,6 +58,21 @@ app.use((req, res) => {
 
 // Auto PORT handling for Render
 const PORT = process.env.PORT || 5000;
+
+// Check critical environment variables on startup
+console.log('\n📋 Environment Check:');
+console.log(`   PORT: ${PORT}`);
+console.log(`   GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? '✅ Set' : '❌ Missing'}`);
+if (!process.env.GEMINI_API_KEY) {
+  console.warn('\n⚠️  WARNING: GEMINI_API_KEY is not set!');
+  console.warn('   Itinerary generation will fail until this is configured.');
+  console.warn('   For local development: Add GEMINI_API_KEY to Backend/.env');
+  console.warn('   For Render deployment: Add GEMINI_API_KEY in Render dashboard → Environment');
+  console.warn('   Get API key from: https://aistudio.google.com/apikey\n');
+} else {
+  console.log('   ✅ All critical environment variables are set\n');
+}
+
 app.listen(PORT, () => {
   console.log(`✅ Server is running on port ${PORT}`);
 });

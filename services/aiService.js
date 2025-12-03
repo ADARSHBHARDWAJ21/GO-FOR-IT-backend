@@ -19,15 +19,18 @@ class AIService {
         this.modelName = process.env.GEMINI_MODEL || this.fallbackModels[0];
 
         if (!this.apiKey) {
-            console.error("❌ GEMINI_API_KEY missing in .env");
+            console.error("❌ GEMINI_API_KEY missing in environment variables");
+            console.error("   Please set GEMINI_API_KEY in your .env file or Render environment variables");
+            this.genAI = null;
         } else {
-            console.log("✅ Gemini AI initialized");
-        }
-
-        try {
-            this.genAI = new GoogleGenerativeAI(this.apiKey);
-        } catch (err) {
-            console.error("❌ Error initializing Gemini AI:", err);
+            console.log("✅ GEMINI_API_KEY found");
+            try {
+                this.genAI = new GoogleGenerativeAI(this.apiKey);
+                console.log("✅ Gemini AI client initialized");
+            } catch (err) {
+                console.error("❌ Error initializing Gemini AI:", err.message);
+                this.genAI = null;
+            }
         }
     }
 
@@ -155,6 +158,28 @@ class AIService {
 
     // Generate a realistic, detailed itinerary with fallback support
     async generateItinerary(tripDetails) {
+        // Validate API key first
+        if (!this.apiKey) {
+            throw new Error(
+                'GEMINI_API_KEY is missing. Please add it to your .env file.\n\n' +
+                'To fix this:\n' +
+                '1. Get an API key from https://aistudio.google.com/apikey\n' +
+                '2. Add GEMINI_API_KEY=your_key_here to Backend/.env\n' +
+                '3. Restart your server'
+            );
+        }
+
+        // Validate that genAI is initialized
+        if (!this.genAI) {
+            throw new Error(
+                'Failed to initialize Gemini AI. Please check your API key.\n\n' +
+                'To fix this:\n' +
+                '1. Verify your API key at https://aistudio.google.com/apikey\n' +
+                '2. Make sure GEMINI_API_KEY in .env is correct\n' +
+                '3. Restart your server'
+            );
+        }
+
         const prompt = this.buildPrompt(tripDetails);
         
         // First, get the actual available models from the API
