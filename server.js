@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const cors = require('cors'); // 1. Make sure this is imported
+const cors = require('cors');
 const { connectDB } = require('./config/db');
 const userRoutes = require('./routes/userRoutes');
 const itineraryRoutes = require('./routes/itineraryRoutes');
@@ -11,68 +11,53 @@ const hotelRoutes = require('./routes/hotelRoutes');
 const flightRoutes = require('./routes/flightRoutes');
 const clerkWebhookRoutes = require('./routes/clerkWebhookRoutes');
 
-// Connect to MongoDB (non-blocking - server will run even if connection fails)
+// Connect to MongoDB
 connectDB().catch((err) => {
   console.warn('MongoDB connection failed. Server will continue running.');
-  console.warn('To fix: Update MONGO_URI in your .env file with valid MongoDB credentials.');
+  console.warn('To fix: Update MONGO_URI in your .env file.');
 });
 
 const app = express();
 
-// 2. THIS IS THE MOST IMPORTANT LINE
-// It must be placed here, before any routes.
-app.use(cors()); 
+// CORS MUST BE BEFORE ROUTES
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+}));
 
-app.use(express.json()); // For parsing JSON bodies
+app.use(express.json());
 
+// Health check route
 app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
-app.use('/api/users', userRoutes); // Your user routes
-app.use('/api/itinerary', itineraryRoutes); // AI itinerary routes
-app.use('/api/hotels', hotelRoutes); // Hotel search routes
-app.use('/api/flights', flightRoutes); // Flight search routes
-app.use('/api/clerk', clerkWebhookRoutes); // Clerk webhook routes
+// API Routes
+app.use('/api/users', userRoutes);
+app.use('/api/itinerary', itineraryRoutes);
+app.use('/api/hotels', hotelRoutes);
+app.use('/api/flights', flightRoutes);
+app.use('/api/clerk', clerkWebhookRoutes);
 
-// Global error handler middleware (must be after all routes)
+// Error handler
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
 
-// Handle 404 routes
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Route not found'
+    message: 'Route not found',
   });
 });
 
+// Auto PORT handling for Render
 const PORT = process.env.PORT || 5000;
-
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
-// Handle port already in use error
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`\n❌ Error: Port ${PORT} is already in use.`);
-    console.error(`\nTo fix this, you can:`);
-    console.error(`1. Kill the process using port ${PORT}:`);
-    console.error(`   Windows: netstat -ano | findstr :${PORT}`);
-    console.error(`   Then: taskkill /PID <PID> /F`);
-    console.error(`   Or use: npx kill-port ${PORT}`);
-    console.error(`\n2. Or change the PORT in your .env file to a different port (e.g., 5001)`);
-    console.error(`\n3. Or find and close the other application using port ${PORT}\n`);
-    process.exit(1);
-  } else {
-    console.error('Server error:', err);
-    process.exit(1);
-  }
+app.listen(PORT, () => {
+  console.log(`✅ Server is running on port ${PORT}`);
 });
